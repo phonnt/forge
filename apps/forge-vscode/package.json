@@ -1,0 +1,228 @@
+{
+  "name": "forge-vscode",
+  "displayName": "forge",
+  "version": "0.1.0",
+  "description": "AI-powered development companion - code review, chat, and more",
+  "type": "module",
+  "publisher": "forge-dev",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anomalyco/forge"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "code-review",
+    "chat",
+    "agent",
+    "llm",
+    "claude",
+    "gpt"
+  ],
+  "activationEvents": [
+    "onView:forge.chat",
+    "onCommand:forge.review",
+    "onCommand:forge.reviewFromClipboard",
+    "onCommand:forge.init",
+    "onCommand:forge.connect",
+    "onCommand:forge.configure",
+    "onCommand:forge.inlineChat",
+    "onCommand:forge.explain",
+    "onCommand:forge.fix",
+    "onCommand:forge.addTests",
+    "onCommand:forge.refactor",
+    "onCommand:forge.showPrompts",
+    "onCommand:forge.showChat",
+    "onCommand:forge.openChatPanel"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "forge.review",
+        "title": "Review PR/MR",
+        "category": "forge"
+      },
+      {
+        "command": "forge.reviewFromClipboard",
+        "title": "Review from Clipboard URL",
+        "category": "forge"
+      },
+      {
+        "command": "forge.init",
+        "title": "Initialize Project",
+        "category": "forge"
+      },
+      {
+        "command": "forge.connect",
+        "title": "Switch Provider",
+        "category": "forge"
+      },
+      {
+        "command": "forge.showChat",
+        "title": "Open Chat (Sidebar)",
+        "category": "forge",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "forge.openChatPanel",
+        "title": "Open Chat Panel (Right)",
+        "category": "forge",
+        "icon": "$(panel-right)"
+      },
+      {
+        "command": "forge.configure",
+        "title": "Open Settings",
+        "category": "forge"
+      },
+      {
+        "command": "forge.clearChat",
+        "title": "Clear Chat",
+        "category": "forge"
+      },
+      {
+        "command": "forge.inlineChat",
+        "title": "Edit with AI",
+        "category": "forge"
+      },
+      {
+        "command": "forge.explain",
+        "title": "Explain this code",
+        "category": "forge"
+      },
+      {
+        "command": "forge.fix",
+        "title": "Fix issues",
+        "category": "forge"
+      },
+      {
+        "command": "forge.addTests",
+        "title": "Add unit tests",
+        "category": "forge"
+      },
+      {
+        "command": "forge.refactor",
+        "title": "Refactor",
+        "category": "forge"
+      },
+      {
+        "command": "forge.showPrompts",
+        "title": "Run Prompt Template",
+        "category": "forge"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "forge-sidebar",
+          "title": "forge",
+          "icon": "$(hubot)"
+        }
+      ]
+    },
+    "views": {
+      "forge-sidebar": [
+        {
+          "id": "forge.chat",
+          "name": "Chat",
+          "type": "webview"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "forge.inlineChat",
+        "key": "ctrl+cmd+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && !editorReadonly"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "forge.reviewFromClipboard",
+          "group": "forge",
+          "when": "editorTextFocus"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "forge.clearChat",
+          "when": "view == forge.chat",
+          "group": "navigation"
+        },
+        {
+          "command": "forge.configure",
+          "when": "view == forge.chat",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "forge",
+      "properties": {
+        "forge.activeProvider": {
+          "type": "string",
+          "default": "",
+          "description": "Active provider name"
+        },
+        "forge.providers": {
+          "type": "array",
+          "default": [],
+          "description": "List of configured providers",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Provider name"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["anthropic", "openai", "ollama", "copilot", "opencode-zen", "opencode-go", "gemini"],
+                "description": "Provider type"
+              },
+              "model": {
+                "type": "string",
+                "description": "Model name"
+              },
+              "apiKey": {
+                "type": "string",
+                "description": "API key"
+              },
+              "baseUrl": {
+                "type": "string",
+                "description": "Base URL (optional)"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist",
+    "package": "npx @vscode/vsce package",
+    "publish": "npx @vscode/vsce publish"
+  },
+  "dependencies": {
+    "forge-core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.7.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}

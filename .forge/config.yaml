@@ -1,0 +1,5 @@
+version: 0.1.0
+review:
+  rulesFile: rules.md
+  outputFormat: markdown
+  outputPath: .forge/review-report.md

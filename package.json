@@ -1,0 +1,23 @@
+{
+  "name": "forge",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w forge-core",
+    "build:cli": "npm run build -w forge-cli",
+    "build:vscode": "npm run build -w forge-vscode",
+    "dev": "npm run dev -w forge-cli",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write '**/*.ts' '**/*.tsx'",
+    "clean": "rm -rf packages/*/dist apps/*/dist"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,23 @@
+import { useEffect, useState } from 'react';
+
+export function useTermSize() {
+  const [size, setSize] = useState(() => ({
+    rows: process.stdout.rows || 24,
+    cols: process.stdout.columns || 80,
+  }));
+
+  useEffect(() => {
+    const onResize = () => {
+      setSize({
+        rows: process.stdout.rows || 24,
+        cols: process.stdout.columns || 80,
+      });
+    };
+    process.stdout.on('resize', onResize);
+    return () => {
+      process.stdout.removeListener('resize', onResize);
+    };
+  }, []);
+
+  return size;
+}

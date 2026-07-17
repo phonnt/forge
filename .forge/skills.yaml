@@ -1,0 +1,21 @@
+# Skills configuration
+# Enable/disable and configure skills for this project
+
+skills:
+  code-review:
+    enabled: true
+    options:
+      severity_threshold: info
+      max_findings_per_file: 20
+      exclude_patterns:
+        - "*.test.*"
+        - "*.spec.*"
+        - "node_modules/**"
+
+  # Future skills (to be implemented)
+  # test-runner:
+  #   enabled: false
+  # deploy-check:
+  #   enabled: false
+  # security-scan:
+  #   enabled: false
