@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>forge</title>
+<style>{{STYLES}}</style></head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">📊 Overview</div>
+    <div class="tab" data-tab="prs">📋 PRs</div>
+    <div class="tab" data-tab="review">🔍 Review</div>
+    <div class="tab" data-tab="chat">💬 Chat</div>
+  </div>
+  <div id="tab-overview" class="tab-content active">{{OVERVIEW_TAB}}</div>
+  <div id="tab-prs" class="tab-content">{{PRS_TAB}}</div>
+  <div id="tab-review" class="tab-content">{{REVIEW_TAB}}</div>
+  <div id="tab-chat" class="tab-content" style="display:flex;flex-direction:column;padding:0">{{CHAT_TAB}}</div>
+  {{SCRIPT}}
+</body></html>

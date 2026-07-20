@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { generateWebviewHtml } from './webviewHtml.js';
+import { generateWebviewHtml } from './webview/chatHtml.js';
 import { getContextInfo } from './agentRunner.js';
 
 export class ForgePanelChat {

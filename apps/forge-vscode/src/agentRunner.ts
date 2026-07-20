@@ -15,7 +15,7 @@ export function getProviderConfig(): { name: string; type: string; model: string
   return providers.find((p: any) => p.name === active) || null;
 }
 
-export function getContextInfo(): { projectPath: string; gitBranch: string | null; provider: string | null } {
+export function getContextInfo(): { projectPath: string; gitBranch: string | null; provider: string | null; ghConnected: boolean; glabConnected: boolean } {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
 
   let gitBranch: string | null = null;
@@ -32,7 +32,19 @@ export function getContextInfo(): { projectPath: string; gitBranch: string | nul
 
   const displayPath = gitBranch ? `${workspaceRoot}  (${gitBranch})` : workspaceRoot;
 
-  return { projectPath: displayPath, gitBranch, provider: provider ? `${provider.type} / ${provider.model}` : null };
+  let ghConnected = false;
+  try {
+    execSync('gh auth status', { encoding: 'utf-8', timeout: 3000 });
+    ghConnected = true;
+  } catch {}
+
+  let glabConnected = false;
+  try {
+    execSync('glab auth status', { encoding: 'utf-8', timeout: 3000 });
+    glabConnected = true;
+  } catch {}
+
+  return { projectPath: displayPath, gitBranch, provider: provider ? `${provider.type} / ${provider.model}` : null, ghConnected, glabConnected };
 }
 
 export async function createAgent(options: {

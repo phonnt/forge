@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>forge — Pull Requests</title>
+<style>${BASE_STYLES}${LIST_STYLES}${EMPTY_STYLES}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.toolbar input{flex:1}
+.toolbar select{font-size:12px}
+.list{display:flex;flex-direction:column;gap:2px}
+.pr-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:4px;cursor:pointer}
+.pr-item:hover{background:var(--vscode-list-hoverBackground)}
+.pr-item .num{font-weight:600;font-size:12px;min-width:36px;color:var(--vscode-descriptionForeground)}
+.pr-item .title{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-item .meta{font-size:10px;color:var(--vscode-descriptionForeground);white-space:nowrap}
+.pr-item .state{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600}
+.pr-item .state.open,.pr-item .state.opened{background:#1d5a3a;color:#89d185}
+.pr-item .state.merged{background:#5a2d82;color:#c586c0}
+.pr-item .state.closed{background:#5a1d1d;color:#f48771}
+.error{color:#f48771;padding:8px 12px;background:#5a1d1d;border-radius:4px;margin-bottom:12px;display:none}
+.loading{text-align:center;padding:20px;color:var(--vscode-descriptionForeground);display:none}
+body{padding:12px}
+</style></head>
+<body>
+  <div class="toolbar">
+    <input id="repoInput" type="text" placeholder="owner/repo" value="{{defaultRepo}}" />
+    <select id="sourceSelect"><option value="github">GitHub</option><option value="gitlab">GitLab</option></select>
+    <button id="loadBtn">Load</button>
+  </div>
+  <div class="error" id="error"></div>
+  <div class="loading" id="loading">Loading...</div>
+  <div class="list" id="list"></div>
+  <script>
+    const vscode = acquireVsCodeApi();
+    const repoInput = document.getElementById('repoInput');
+    const listEl = document.getElementById('list');
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+
+    function loadPRs() {
+      const repo = repoInput.value.trim();
+      if (!repo) return;
+      listEl.innerHTML = '';
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      vscode.postMessage({ type: 'load', repo, source: document.getElementById('sourceSelect').value });
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadPRs);
+    repoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadPRs(); });
+
+    window.addEventListener('message', (e) => {
+      const d = e.data;
+      switch (d.type) {
+        case 'prs':
+          loadingEl.style.display = 'none';
+          if (!d.prs || d.prs.length === 0) {
+            listEl.innerHTML = '<div class="empty">No pull requests found.<br/>Check repo name and authentication.</div>';
+            return;
+          }
+          listEl.innerHTML = d.prs.map(pr =>
+            '<div class="pr-item" data-url="' + esc(pr.url) + '">' +
+              '<span class="num">#' + pr.number + '</span>' +
+              '<span class="title">' + esc(pr.title) + '</span>' +
+              '<span class="state ' + pr.state + '">' + pr.state + '</span>' +
+              '<span class="meta">' + esc(pr.author) + '</span>' +
+              '<span class="meta">' + esc(pr.branch) + '</span>' +
+              '<span class="meta">' + ago(pr.time) + '</span>' +
+            '</div>'
+          ).join('');
+          break;
+        case 'error':
+          loadingEl.style.display = 'none';
+          errorEl.style.display = 'block';
+          errorEl.textContent = d.message;
+          break;
+      }
+    });
+
+    listEl.addEventListener('click', (e) => {
+      const item = e.target.closest('.pr-item');
+      if (item && item.dataset.url) {
+        vscode.postMessage({ type: 'review', url: item.dataset.url });
+      }
+    });
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function ago(t) { if(!t) return ''; const d=(Date.now()-new Date(t).getTime())/1000; if(d<60) return 'just now'; if(d<3600) return Math.floor(d/60)+'m ago'; if(d<86400) return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; }
+
+    loadPRs();
+  </script>
+</body><

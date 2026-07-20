@@ -1,11 +1,16 @@
 import * as vscode from 'vscode';
+import { getContextInfo } from '../../agentRunner.js';
 
 export class NavPanel implements vscode.WebviewViewProvider {
+  private _view?: vscode.WebviewView;
+
   resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ): void {
+    this._view = webviewView;
+
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [],
@@ -17,10 +22,22 @@ export class NavPanel implements vscode.WebviewViewProvider {
       if (data.type === 'runCommand' && data.command) {
         vscode.commands.executeCommand(data.command);
       }
+      if (data.type === 'ready') {
+        this._sendContext();
+      }
     });
   }
 
+  updateContext(): void {
+    this._sendContext();
+  }
+
   reveal(): void {}
+
+  private _sendContext(): void {
+    const info = getContextInfo();
+    this._view?.webview.postMessage({ type: 'context', ...info });
+  }
 
   private _getHtml(): string {
     return `<!DOCTYPE html>
@@ -43,6 +60,43 @@ export class NavPanel implements vscode.WebviewViewProvider {
       font-weight: 600;
       margin-bottom: 10px;
       color: var(--vscode-sideBarTitle-foreground);
+    }
+    .context {
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--vscode-panel-border);
+    }
+    .context .path {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .context .branch {
+      font-size: 10px;
+      color: var(--vscode-charts-yellow);
+      margin-bottom: 2px;
+    }
+    .context .provider {
+      font-size: 11px;
+      color: var(--vscode-charts-green);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .context .none {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      font-style: italic;
+      opacity: 0.7;
+    }
+    .context .services {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      margin-top: 4px;
+      opacity: 0.8;
     }
     .btn {
       display: flex;
@@ -85,19 +139,33 @@ export class NavPanel implements vscode.WebviewViewProvider {
       letter-spacing: 0.5px;
       opacity: 0.7;
     }
+
   </style>
 </head>
 <body>
-  <h2>forge</h2>
+  <div class="context" id="context">
+    <div class="path" id="ctxPath"></div>
+    <div class="branch" id="ctxBranch"></div>
+    <div class="provider" id="ctxModel"></div>
+    <div class="services" id="ctxServices"></div>
+  </div>
 
-  <button class="btn primary" onclick="run('forge.openChatPanel')">
+  <div class="actions">
     <span class="icon">💬</span>
     <span class="label">Open Chat</span>
     <span class="shortcut">⌘L</span>
   </button>
 
   <div class="section">
-    <div class="section-title">Actions</div>
+    <div class="section-title">ACTIONS</div>
+    <button class="btn" onclick="run('forge.dashboard')">
+      <span class="icon">📊</span>
+      <span class="label">Dashboard</span>
+    </button>
+    <button class="btn" onclick="run('forge.browsePRs')">
+      <span class="icon">📋</span>
+      <span class="label">Browse PRs/MRs</span>
+    </button>
     <button class="btn" onclick="run('forge.review')">
       <span class="icon">🔍</span>
       <span class="label">Review PR/MR</span>
@@ -131,9 +199,36 @@ export class NavPanel implements vscode.WebviewViewProvider {
 
   <script>
     const vscode = acquireVsCodeApi();
+
+    window.addEventListener('message', (e) => {
+      if (e.data.type === 'context') {
+        updateContext(e.data);
+      }
+    });
+
+    function updateContext(info) {
+      document.getElementById('ctxPath').textContent = info.projectPath ? '\u{1F4C1} ' + info.projectPath : 'No workspace';
+      document.getElementById('ctxBranch').textContent = info.gitBranch ? '\u23C7 ' + info.gitBranch : '';
+      const modelEl = document.getElementById('ctxModel');
+      if (info.provider) {
+        modelEl.textContent = info.provider;
+        modelEl.className = 'provider';
+      } else {
+        modelEl.textContent = 'No provider configured';
+        modelEl.className = 'none';
+      }
+
+      const services = [];
+      services.push((info.ghConnected ? '\u2705' : '\u274C') + ' GitHub');
+      services.push((info.glabConnected ? '\u2705' : '\u274C') + ' GitLab');
+      document.getElementById('ctxServices').textContent = services.join('  ');
+    }
+
     function run(cmd) {
       vscode.postMessage({ type: 'runCommand', command: cmd });
     }
+
+    vscode.postMessage({ type: 'ready' });
   </script>
 </body>
 </html>`;

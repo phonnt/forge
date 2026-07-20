@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>forge Review</title>
+<style>${BASE_STYLES}${FINDING_STYLES}${PROGRESS_STYLES}${EMPTY_STYLES}
+body{padding:16px}
+.header{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--vscode-panel-border)}
+.header h1{font-size:18px;margin-bottom:4px}
+.form{max-width:600px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-weight:600;margin-bottom:4px;font-size:12px}
+.form-group .required{color:var(--vscode-inputValidation-errorForeground);margin-left:2px}
+.form-group .optional{color:var(--vscode-descriptionForeground);font-weight:400;font-size:10px;margin-left:6px}
+.file-row{display:flex;gap:6px}
+.file-row input{flex:1}
+.radio-group{display:flex;gap:16px;margin-top:4px}
+.radio-group label{font-weight:400;display:flex;align-items:center;gap:4px}
+.radio-group input[type=radio]{width:auto}
+.checkbox-row{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.checkbox-row input[type=checkbox]{width:auto}
+.submit-btn{width:100%;margin-top:6px;padding:8px;font-weight:600;font-size:13px}
+.hidden{display:none}
+</style></head>
+<body>
+  <div class="header"><h1>Code Review</h1></div>
+  <div id="formArea" class="form">
+    <div class="form-group">
+      <label>URL <span class="required">*</span></label>
+      <input id="urlInput" type="text" placeholder="https://github.com/owner/repo/pull/42" />
+    </div>
+    <div class="form-group">
+      <label>Rules file <span class="optional">(optional)</span></label>
+      <div class="file-row">
+        <input id="rulesInput" type="text" placeholder=".forge/rules.md" value=".forge/rules.md" />
+        <button id="pickFileBtn" class="secondary">Browse</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Output format</label>
+      <div class="radio-group">
+        <label><input type="radio" name="format" value="markdown" checked /> Markdown</label>
+        <label><input type="radio" name="format" value="json" /> JSON</label>
+        <label><input type="radio" name="format" value="sarif" /> SARIF</label>
+      </div>
+    </div>
+    <button class="submit-btn" id="submitBtn">Start Review</button>
+  </div>
+  <div id="progress" class="progress" style="display:none"><span class="spinner">&#9696;</span> <span id="progressText">Analyzing...</span></div>
+  <div id="summary" class="summary"></div>
+  <div id="findings"></div>
+  <script>
+    const vscode = acquireVsCodeApi();
+    const urlInput = document.getElementById('urlInput');
+    const rulesInput = document.getElementById('rulesInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressEl = document.getElementById('progress');
+    const progressText = document.getElementById('progressText');
+    const summaryEl = document.getElementById('summary');
+    const findingsEl = document.getElementById('findings');
+    let findings = [];
+
+    const SEV_ICONS = { critical: '\u{1F534}', major: '\u{1F7E0}', minor: '\u{1F7E1}', info: '\u{1F535}' };
+
+    function submit() {
+      const url = urlInput.value.trim();
+      if(!/github\\.com\\/[^/]+\\/[^/]+\\/pull\\/\\d+/.test(url) && !/gitlab\\.com\\/.+\\/-\\/merge_requests\\/\\d+/.test(url)){
+        urlInput.classList.add('invalid'); return;
+      }
+      urlInput.classList.remove('invalid');
+      const fmt = document.querySelector('input[name="format"]:checked').value;
+      vscode.postMessage({ type: 'submit', url, rulesFile: rulesInput.value||undefined, format: fmt });
+      document.getElementById('formArea').classList.add('hidden');
+      progressEl.style.display = 'block';
+    }
+
+    urlInput.addEventListener('keydown', (e) => { if(e.key==='Enter'){e.preventDefault();submit();} else urlInput.classList.remove('invalid'); });
+    submitBtn.addEventListener('click', submit);
+    document.getElementById('pickFileBtn').addEventListener('click', () => vscode.postMessage({ type: 'pickFile' }));
+
+    window.addEventListener('message', (e) => {
+      const d = e.data;
+      if(d.type==='progress') progressText.textContent = d.message;
+      if(d.type==='finding'){ findings.push(d); renderFinding(d); }
+      if(d.type==='summary') renderSummary(d);
+      if(d.type==='error'){ progressEl.className='error'; progressText.textContent='❌ '+d.message; }
+      if(d.type==='done'){ progressEl.style.display='none'; if(findings.length===0) findingsEl.innerHTML='<div class="empty">✅ No issues found. Great job!</div>'; }
+      if(d.type==='fillUrl'){ urlInput.value = d.url||''; urlInput.classList.remove('invalid'); }
+      if(d.type==='filePicked') rulesInput.value = d.path;
+    });
+
+    function renderSummary(s) {
+      summaryEl.innerHTML =
+        '<div class="stat critical"><div class="num">'+(s.critical||0)+'</div><div class="label">Critical</div></div>' +
+        '<div class="stat major"><div class="num">'+(s.major||0)+'</div><div class="label">Major</div></div>' +
+        '<div class="stat minor"><div class="num">'+(s.minor||0)+'</div><div class="label">Minor</div></div>' +
+        '<div class="stat info"><div class="num">'+(s.info||0)+'</div><div class="label">Info</div></div>';
+    }
+
+    function renderFinding(f) {
+      const loc = f.lineStart ? f.file+':'+f.lineStart+(f.lineEnd?'-'+f.lineEnd:'') : f.file;
+      const div = document.createElement('div');
+      div.className = 'finding';
+      div.innerHTML =
+        '<span class="sev '+f.severity+'">'+f.severity+'</span><span class="title">'+(SEV_ICONS[f.severity]||'')+' '+esc(f.title)+'</span>' +
+        '<div class="file">📄 '+esc(loc)+' | '+esc(f.category)+'</div>' +
+        '<div class="desc">'+esc(f.description)+'</div>' +
+        '<div class="suggestion">💡 '+esc(f.suggestion)+'</div>';
+      findingsEl.appendChild(div);
+    }
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    urlInput.focus();
+    vscode.postMessage({ type: 'ready' });
+  </script>
+</body><

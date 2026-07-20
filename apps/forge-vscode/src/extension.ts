@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
-import { NavPanel } from './navPanel.js';
+import { NavPanel } from './sidebar/chat/index.js';
 import { ForgePanelChat } from './panelChat.js';
+import { createTicketView } from './sidebar/ticket/index.js';
+import { createMRView, refreshMRList, setContext, handleAuthProvider, handleSelectRepo, handleInstallCLI, handleMRFilter, handleSwitchRepo, handleSwitchGitProvider } from './sidebar/mr/index.js';
+import { createTitleView } from './sidebar/title/index.js';
 import { createStatusBar } from './statusBar.js';
 import { ForgeCodeActionProvider } from './codeActions.js';
 import { createAgent, getProviderConfig, ChatEventHandler } from './agentRunner.js';
@@ -54,15 +57,30 @@ export function activate(context: vscode.ExtensionContext) {
 
   setupChat(panelChat);
 
+  const mrView = createMRView();
+  setContext(context);
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('forge.chat', navPanel, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.window.registerWebviewViewProvider('forge.ticket', createTicketView(), {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.window.registerWebviewViewProvider('forge.mr', mrView, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.window.registerWebviewViewProvider('forge.title', createTitleView(), {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('forge.review', wrapCommand(() => import('./commands.js').then((m) => m.handleReview()), 'review')),
-    vscode.commands.registerCommand('forge.reviewFromClipboard', wrapCommand(() => import('./commands.js').then((m) => m.handleReviewFromClipboard(panelChat)), 'reviewFromClipboard')),
+    vscode.commands.registerCommand('forge.review', wrapCommand(() => import('./commands.js').then((m) => m.handleReview(context)), 'review')),
+    vscode.commands.registerCommand('forge.reviewFromClipboard', wrapCommand(() => import('./commands.js').then((m) => m.handleReviewFromClipboard()), 'reviewFromClipboard')),
+    vscode.commands.registerCommand('forge.reviewFromUrl', (url: string) => import('./commands.js').then((m) => m.handleReviewFromUrl(context, url))),
+    vscode.commands.registerCommand('forge.browsePRs', () => import('./prBrowser.js').then((m) => m.handleBrowsePRs())),
+    vscode.commands.registerCommand('forge.dashboard', () => import('./dashboard/dashboard.js').then((m) => m.handleDashboard())),
     vscode.commands.registerCommand('forge.init', wrapCommand(() => import('./commands.js').then((m) => m.handleInit(panelChat)), 'init')),
     vscode.commands.registerCommand('forge.connect', wrapCommand(() => import('./commands.js').then((m) => m.handleConnect(panelChat)), 'connect')),
     vscode.commands.registerCommand('forge.showChat', () => navPanel.reveal()),
@@ -77,6 +95,13 @@ export function activate(context: vscode.ExtensionContext) {
       import('./inlineChat.js').then((m) => m.handleApplyDiff(code, language));
     }),
     vscode.commands.registerCommand('forge.showPrompts', wrapCommand(() => import('./prompts.js').then((m) => m.handleShowPrompts()), 'showPrompts')),
+    vscode.commands.registerCommand('forge.authGitProvider', wrapCommand(() => handleAuthProvider(), 'authGitProvider')),
+    vscode.commands.registerCommand('forge.selectRepo', wrapCommand(() => handleSelectRepo(), 'selectRepo')),
+    vscode.commands.registerCommand('forge.installCLI', wrapCommand(() => handleInstallCLI(), 'installCLI')),
+    vscode.commands.registerCommand('forge.filterMR', wrapCommand(() => handleMRFilter(), 'filterMR')),
+    vscode.commands.registerCommand('forge.refreshMR', wrapCommand(() => refreshMRList(), 'refreshMR')),
+    vscode.commands.registerCommand('forge.switchRepo', wrapCommand(() => handleSwitchRepo(), 'switchRepo')),
+    vscode.commands.registerCommand('forge.switchGitProvider', wrapCommand(() => handleSwitchGitProvider(), 'switchGitProvider')),
     vscode.languages.registerCodeActionsProvider('*', new ForgeCodeActionProvider(), {
       providedCodeActionKinds: ForgeCodeActionProvider.providedCodeActionKinds,
     }),
@@ -85,12 +110,14 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('forge')) {
+        navPanel.updateContext();
         panelChat.updateContext();
       }
     }),
   );
 
-  createStatusBar(context, panelChat);
+  // createStatusBar(context, panelChat);
+  refreshMRList();
   console.log('[forge] Extension activated successfully');
 }
 

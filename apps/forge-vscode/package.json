@@ -116,13 +116,50 @@
         "command": "forge.showPrompts",
         "title": "Run Prompt Template",
         "category": "forge"
+      },
+      {
+        "command": "forge.authGitProvider",
+        "title": "Authenticate Git Provider",
+        "category": "forge"
+      },
+      {
+        "command": "forge.selectRepo",
+        "title": "Select Repository",
+        "category": "forge"
+      },
+      {
+        "command": "forge.installCLI",
+        "title": "Install Git CLI",
+        "category": "forge"
+      },
+      {
+        "command": "forge.filterMR",
+        "title": "Filter",
+        "category": "forge",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "forge.refreshMR",
+        "title": "Refresh",
+        "category": "forge",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "forge.switchRepo",
+        "title": "Switch Repository",
+        "category": "forge"
+      },
+      {
+        "command": "forge.switchGitProvider",
+        "title": "Switch Git Provider",
+        "category": "forge"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "forge-sidebar",
-          "title": "forge",
+          "title": "Forge",
           "icon": "$(hubot)"
         }
       ]
@@ -132,6 +169,21 @@
         {
           "id": "forge.chat",
           "name": "Chat",
+          "type": "webview"
+        },
+        {
+          "id": "forge.ticket",
+          "name": "Ticket",
+          "type": "webview"
+        },
+        {
+          "id": "forge.mr",
+          "name": "Merge Request",
+          "type": "webview"
+        },
+        {
+          "id": "forge.title",
+          "name": "Title",
           "type": "webview"
         }
       ]
@@ -162,6 +214,26 @@
           "command": "forge.configure",
           "when": "view == forge.chat",
           "group": "navigation"
+        },
+        {
+          "command": "forge.filterMR",
+          "when": "view == forge.mr",
+          "group": "navigation"
+        },
+        {
+          "command": "forge.refreshMR",
+          "when": "view == forge.mr",
+          "group": "navigation"
+        },
+        {
+          "command": "forge.switchRepo",
+          "when": "view == forge.mr",
+          "group": "group_1@1"
+        },
+        {
+          "command": "forge.switchGitProvider",
+          "when": "view == forge.mr",
+          "group": "group_1@2"
         }
       ]
     },
@@ -208,7 +280,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/webview/*.html dist/webview/ && cp -r src/dashboard/*.html dist/dashboard/",
     "watch": "tsc -watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
